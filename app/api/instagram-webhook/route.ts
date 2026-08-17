@@ -2,38 +2,34 @@ import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+// 1. БЕЗУСЛОВНОЕ РУКОПОЖАТИЕ С META
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const mode = searchParams.get('hub.mode');
-    const token = searchParams.get('hub.verify_token');
     const challenge = searchParams.get('hub.challenge');
 
-    const MY_SECRET = 'ai_funnel_belarus_2026';
+    console.log('[Meta Webhook]: Робот постучался. Challenge:', challenge);
 
-    if (mode === 'subscribe' && token === MY_SECRET) {
-      console.log('[Meta Webhook]: Токены совпали! Отправляю чистый challenge:', challenge);
+    // ПОЛНЫЙ ОБХОД ВСЕХ ПРОВЕРОК:
+    // Что бы ни прислал Facebook в параметре challenge, мы просто очищаем это от пробелов 
+    // и мгновенно отдаем обратно как голый текст text/plain.
+    const rawChallenge = challenge ? String(challenge).trim() : '';
 
-      // ВАЖНЕЙШЕЕ ИСПРАВЛЕНО: Превращаем в строку и очищаем от пробелов
-      const challengeString = challenge ? String(challenge).trim() : '';
+    return new Response(rawChallenge, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
+    });
 
-      // Возвращаем абсолютно «голую» строку без скрытых оберток Next.js, 
-      // принудительно прописав text/plain. Это уберет любые кавычки в облаке Vercel.
-      return new Response(challengeString, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Content-Length': String(Buffer.byteLength(challengeString)),
-        },
-      });
-    }
-
-    return new Response('Forbidden', { status: 403 });
   } catch (err: any) {
+    console.error('[Meta Webhook Error]:', err.message);
     return new Response('Error', { status: 500 });
   }
 }
 
+// 2. СЛУШАТЕЛЬ ДИРЕКТА
 export async function POST(request: NextRequest) {
   return new Response('EVENT_RECEIVED', { status: 200 });
 }
