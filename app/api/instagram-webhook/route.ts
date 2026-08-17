@@ -12,17 +12,18 @@ export async function GET(request: NextRequest) {
     const MY_SECRET = 'ai_funnel_belarus_2026';
 
     if (mode === 'subscribe' && token === MY_SECRET) {
-      console.log('[Meta Webhook]: Токены совпали! Отправляю чистый HTML поток.');
+      console.log('[Meta Webhook]: Токены совпали! Отправляю чистый challenge:', challenge);
 
-      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Переводим тип в text/html по требованию Meta 
-      // и склеиваем с пустой строкой, чтобы убрать любые скрытые обертки Next.js
-      const rawText = '' + (challenge ? String(challenge).trim() : '');
+      // ВАЖНЕЙШЕЕ ИСПРАВЛЕНО: Превращаем в строку и очищаем от пробелов
+      const challengeString = challenge ? String(challenge).trim() : '';
 
-      return new Response(rawText, {
+      // Возвращаем абсолютно «голую» строку без скрытых оберток Next.js, 
+      // принудительно прописав text/plain. Это уберет любые кавычки в облаке Vercel.
+      return new Response(challengeString, {
         status: 200,
         headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Length': String(Buffer.byteLength(challengeString)),
         },
       });
     }
