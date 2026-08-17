@@ -1,42 +1,49 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
-// СТРОГОЕ ТРЕБОВАНИЕ ДЛЯ VERCEL: Принудительно отключаем кэширование роута!
 export const dynamic = 'force-dynamic';
 
-// 1. ВЕРИФИКАЦИЯ ДЛЯ РОБОТОВ META (FACEBOOK)
-export async function GET(request: Request) {
+// 1. ВЕРИФИКАЦИЯ WEBHOOK ДЛЯ FACEBOOK DEVELOPERS
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    // Используем встроенный метод nextUrl для мгновенного и точного чтения параметров в облаке Vercel
+    const searchParams = request.nextUrl.searchParams;
     const mode = searchParams.get('hub.mode');
     const token = searchParams.get('hub.verify_token');
     const challenge = searchParams.get('hub.challenge');
 
-    // Жестко фиксируем проверочное слово прямо в коде для 100% надежности
+    // Наше секретное проверочное слово
     const MY_SECRET = 'ai_funnel_belarus_2026';
 
-    console.log('[Meta-Верификация]: Запрос получен успешно!');
+    console.log('[Meta Verification]: Запрос пойман сервером Vercel!');
+    console.log('[Meta Verification]: Считанный challenge:', challenge);
 
     if (mode === 'subscribe' && token === MY_SECRET) {
-      const responseText = challenge ? String(challenge) : '';
+      // Принудительно очищаемchallenge от любых скрытых пробелов или символов перевода строки
+      const cleanChallenge = challenge ? String(challenge).trim() : '';
 
-      // Отдаем чистый текст без кэширования
-      return new Response(responseText, {
+      // Возвращаем чистый текст, как требует документация MetaGraph API
+      return new Response(cleanChallenge, {
         status: 200,
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
         },
       });
     }
 
     return new Response('Forbidden', { status: 403 });
   } catch (err: any) {
-    return new Response('Internal Server Error', { status: 500 });
+    console.error('[Meta Verification Error]:', err.message);
+    return new Response('Internal Error', { status: 500 });
   }
 }
 
 // 2. СЛУШАТЕЛЬ ДИРЕКТА
-export async function POST(request: Request) {
-  return new Response('EVENT_RECEIVED', { status: 200 });
+export async function POST(request: NextRequest) {
+  try {
+    return new Response('EVENT_RECEIVED', { status: 200 });
+  } catch (err: any) {
+    return new Response('Error', { status: 500 });
+  }
 }
 
