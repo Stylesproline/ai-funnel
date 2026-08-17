@@ -1,11 +1,10 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 // 1. ВЕРИФИКАЦИЯ WEBHOOK ДЛЯ FACEBOOK DEVELOPERS
 export async function GET(request: NextRequest) {
   try {
-    // Используем встроенный метод nextUrl для мгновенного и точного чтения параметров в облаке Vercel
     const searchParams = request.nextUrl.searchParams;
     const mode = searchParams.get('hub.mode');
     const token = searchParams.get('hub.verify_token');
@@ -14,19 +13,22 @@ export async function GET(request: NextRequest) {
     // Наше секретное проверочное слово
     const MY_SECRET = 'ai_funnel_belarus_2026';
 
-    console.log('[Meta Verification]: Запрос пойман сервером Vercel!');
-    console.log('[Meta Verification]: Считанный challenge:', challenge);
+    console.log('[Meta-Верификация]: Запрос получен сервером.');
 
     if (mode === 'subscribe' && token === MY_SECRET) {
-      // Принудительно очищаемchallenge от любых скрытых пробелов или символов перевода строки
-      const cleanChallenge = challenge ? String(challenge).trim() : '';
+      console.log('[Meta-Верификация]: Токены совпали! Challenge:', challenge);
+      
+      // Если challenge является числом (например, 112341), парсим его в число, 
+      // иначе возвращаем как очищенную строку. Это уберет любые кавычки Next.js.
+      const parsedChallenge = challenge && !isNaN(Number(challenge)) 
+        ? Number(challenge) 
+        : String(challenge).trim();
 
-      // Возвращаем чистый текст, как требует документация MetaGraph API
-      return new Response(cleanChallenge, {
+      // Самый надежный способ ответа в App Router: возвращаем challenge напрямую
+      return new Response(String(parsedChallenge), {
         status: 200,
         headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Content-Type': 'text/plain',
         },
       });
     }
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 2. СЛУШАТЕЛЬ ДИРЕКТА
+// 2. СЛУШАТЕЛЬ ДИРЕКТА (Оставляем для будущей обработки сообщений)
 export async function POST(request: NextRequest) {
   try {
     return new Response('EVENT_RECEIVED', { status: 200 });
