@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// 1. ВЕРИФИКАЦИЯ WEBHOOK ДЛЯ FACEBOOK DEVELOPERS
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -10,42 +9,31 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('hub.verify_token');
     const challenge = searchParams.get('hub.challenge');
 
-    // Наше секретное проверочное слово
     const MY_SECRET = 'ai_funnel_belarus_2026';
 
-    console.log('[Meta-Верификация]: Запрос получен сервером.');
-
     if (mode === 'subscribe' && token === MY_SECRET) {
-      console.log('[Meta-Верификация]: Токены совпали! Challenge:', challenge);
-      
-      // Если challenge является числом (например, 112341), парсим его в число, 
-      // иначе возвращаем как очищенную строку. Это уберет любые кавычки Next.js.
-      const parsedChallenge = challenge && !isNaN(Number(challenge)) 
-        ? Number(challenge) 
-        : String(challenge).trim();
+      console.log('[Meta Webhook]: Токены совпали! Отправляю чистый HTML поток.');
 
-      // Самый надежный способ ответа в App Router: возвращаем challenge напрямую
-      return new Response(String(parsedChallenge), {
+      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Переводим тип в text/html по требованию Meta 
+      // и склеиваем с пустой строкой, чтобы убрать любые скрытые обертки Next.js
+      const rawText = '' + (challenge ? String(challenge).trim() : '');
+
+      return new Response(rawText, {
         status: 200,
         headers: {
-          'Content-Type': 'text/plain',
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
         },
       });
     }
 
     return new Response('Forbidden', { status: 403 });
   } catch (err: any) {
-    console.error('[Meta Verification Error]:', err.message);
-    return new Response('Internal Error', { status: 500 });
+    return new Response('Error', { status: 500 });
   }
 }
 
-// 2. СЛУШАТЕЛЬ ДИРЕКТА (Оставляем для будущей обработки сообщений)
 export async function POST(request: NextRequest) {
-  try {
-    return new Response('EVENT_RECEIVED', { status: 200 });
-  } catch (err: any) {
-    return new Response('Error', { status: 500 });
-  }
+  return new Response('EVENT_RECEIVED', { status: 200 });
 }
 
