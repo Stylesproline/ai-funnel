@@ -3,12 +3,11 @@ import axios from 'axios';
 import TimerAndButton from './TimerAndButton';
 
 // === СЕРВЕРНОЕ ДЕЙСТВИЕ ДЛЯ ВЫСТАВЛЕНИЯ СЧЕТА E-POS / ЕРИП ===
-export async function createExpressPayEripInvoice() {
+// Добавили аргумент formData, который приходит из нашей новой формы ввода
+export async function createExpressPayEripInvoice(formData: { name: string; phone: string }) {
   'use server';
 
   try {
-    // Лучше хранить токен в .env:
-    // EXPRESSPAY_TOKEN=ваш_токен
     const token = process.env.EXPRESSPAY_TOKEN;
 
     if (!token) {
@@ -18,29 +17,32 @@ export async function createExpressPayEripInvoice() {
       };
     }
 
-    // Параметры счета
-    const apiParams = {
-      AccountNo: 'epos_' + Date.now(),
+    // Очищаем телефон от лишних символов, чтобы шлюз принял строку без сбоев
+    const cleanPhone = formData.phone.replace(/[^0-9+]/g, '');
 
-      // ExpressPay в документации указывает запятую
-      // как разделитель дробной части
+    // Параметры счета (Обновлено: вшиваем реальные данные клиента)
+    const apiParams = {
+      // КЛЮЧЕВОЙ ПАРАМЕТР: Вместо epos_время пишем телефон клиента!
+      // ExpressPay вернет эту строку нам в Telegram-уведомлении после оплаты.
+      AccountNo: 'tel_' + cleanPhone,
+
+      // Ваша правильная сумма с запятой
       Amount: '14,90',
 
       Currency: '933',
 
       Info: 'Комплект ИИ-Маркетолог: Шаблоны и Промпты',
 
-      Surname: 'Клиент',
+      // Берем реальное имя с формы
+      Surname: formData.name || 'Клиент',
 
       FirstName: 'ИИ-Курса',
 
-      // КЛЮЧЕВОЙ ПАРАМЕТР:
-      // 1 = вернуть публичную ссылку на счет
+      // Ваш ключевой параметр для возврата ссылки
       ReturnInvoiceUrl: '1'
     };
 
-    const url =
-      `https://api.express-pay.by/v1/invoices?token=${encodeURIComponent(token)}`;
+    const url = `https://api.express-pay.by/v1/invoices?token=${encodeURIComponent(token)}`;
 
     console.log(
       '[E-POS]: Отправка POST-запроса:',
@@ -68,117 +70,42 @@ export async function createExpressPayEripInvoice() {
 
     const data = response.data;
 
-    // =====================================================
-    // ExpressPay должен вернуть:
-    //
-    // {
-    //   InvoiceNo: 25803142,
-    //   InvoiceUrl: "https://..."
-    // }
-    // =====================================================
-
-    if (data?.InvoiceUrl) {
-      console.log(
-        '[E-POS]: Публичная ссылка на оплату:',
-        data.InvoiceUrl
-      );
-
-      return {
-        redirectUrl: data.InvoiceUrl,
-        invoiceNo: data.InvoiceNo
-      };
+    // Считываем InvoiceUrl, который возвращает шлюз благодаря параметру ReturnInvoiceUrl
+    if (data && data.InvoiceUrl) {
+      console.log('[E-POS]: Ссылка на оплату получена:', data.InvoiceUrl);
+      return { redirectUrl: data.InvoiceUrl };
     }
 
-    // Счет создан, но ссылка почему-то не пришла
-    if (data?.InvoiceNo) {
-      console.error(
-        '[E-POS]: Счет создан, но InvoiceUrl отсутствует:',
-        data
-      );
-
-      return {
-        error:
-          `Счет №${data.InvoiceNo} создан, ` +
-          'но ExpressPay не вернул ссылку на оплату.'
-      };
+    // Страховка на случай, если шлюз вернул массив или структуру без прямой ссылки
+    if (data && data.InvoiceNo) {
+      const publicInvoiceUrl = 'https://expresspay.by' + data.InvoiceNo;
+      return { redirectUrl: publicInvoiceUrl };
     }
 
-    // ExpressPay вернул ошибку
-    if (data?.Error) {
-      console.error(
-        '[E-POS]: Ошибка ExpressPay:',
-        data.Error
-      );
-
-      return {
-        error:
-          `Ошибка ExpressPay: ${
-            data.Error.Msg || 'Неизвестная ошибка'
-          }`
-      };
-    }
-
-    return {
-      error:
-        'ExpressPay вернул неожиданный ответ: ' +
-        JSON.stringify(data)
-    };
+    return { error: 'Шлюз создал счет, но не передал URL для оплаты.' };
 
   } catch (err: any) {
-
-    console.error('[E-POS]: Ошибка при создании счета');
-
-    if (err.response) {
-      console.error(
-        '[E-POS]: HTTP status:',
-        err.response.status
-      );
-
-      console.error(
-        '[E-POS]: Ответ сервера:',
-        JSON.stringify(err.response.data, null, 2)
-      );
-
-      return {
-        error:
-          'Отказ ExpressPay: ' +
-          JSON.stringify(err.response.data)
-      };
-    }
-
-    console.error('[E-POS]: Ошибка сети:', err.message);
-
-    return {
-      error:
-        'Не удалось связаться с ExpressPay: ' +
-        err.message
-    };
+    console.error('Ошибка создания счета в ЕРИП:', err.message);
+    return { error: 'Не удалось связаться с ЕРИП. Попробуйте позже.' };
   }
 }
-
 
 export default function ThanksPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4 font-sans">
-
       <div className="max-w-md w-full bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700 text-center">
-
+        
         <span className="text-4xl">🎉</span>
-
-        <h1 className="text-2xl font-bold mt-3 text-emerald-400">
-          Ваша заявка принята!
-        </h1>
-
-        <p className="text-slate-400 text-sm mt-1">
-          Базовые материалы уже отправляются вам на телефон.
+        <h1 className="text-2xl font-black mt-3 text-emerald-400">Ваша заявка принята!</h1>
+        <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+          Для автоматического формирования счета в системе ЕРИП и гарантированной выдачи материалов введите ваши контакты:
         </p>
 
-        <TimerAndButton
-          onPayAction={createExpressPayEripInvoice}
-        />
+        {/* Передаем обновленную функцию в компонент формы */}
+        <TimerAndButton onPayAction={createExpressPayEripInvoice} />
 
       </div>
-
     </div>
   );
 }
+
