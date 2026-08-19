@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
                       `🔹 Сумма: ${amount || '14,90'} BYN\n\n` +
                       `🚀 Клиент оплатил трипвайер. Возьми его телефон, найди в Telegram/Viber или напиши в Директ и продублируй ссылку на Google Диск на всякий случай!`;
 
-    const tgUrl = `https://telegram.org{botToken}/sendMessage`;
+    const tgUrl = `https://telegram.org/{botToken}/sendMessage`;
 
     // Отправляем запрос на сервера Телеграм
     await axios.post(tgUrl, {
