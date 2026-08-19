@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
                       `🔹 Сумма: ${amount} BYN\n\n` +
                       `👉 Проверь личку клиента и продублируй ему ссылку на Google Диск!`;
 
-    const tgUrl = `https://telegram.org{botToken}/sendMessage`;
+    const tgUrl = `https://telegram.org/{botToken}/sendMessage`;
 
     // 3. ОТПРАВКА С РАСШИРЕННОЙ ДИАГНОСТИКОЙ ОШИБОК
     try {
