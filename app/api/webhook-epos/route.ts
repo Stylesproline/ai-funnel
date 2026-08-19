@@ -5,50 +5,71 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Считываем данные, которые ExpressPay присылает методом POST в формате FormData
-    const formData = await request.formData();
-    
-    const invoiceNo = formData.get('InvoiceNo') as string; // Номер счета в ЕРИП
-    const accountNo = formData.get('AccountNo') as string; // Здесь лежит наш 'tel_+375...'
-    const amount = formData.get('Amount') as string;       // Сумма платежа
+    // 1. Считываем данные от ExpressPay. Если это наш curl-тест, берем параметры
+    let invoiceNo = '';
+    let accountNo = '';
+    let amount = '14,90';
 
-    console.log(`[ExpressPay Webhook]: Поступила оплата счета №${invoiceNo} на сумму ${amount} BYN`);
+    try {
+      const formData = await request.formData();
+      invoiceNo = formData.get('InvoiceNo') as string || '';
+      accountNo = formData.get('AccountNo') as string || '';
+      amount = formData.get('Amount') as string || '14,90';
+    } catch {
+      // Страховка на случай json-тестов
+      const body: any = await request.json().catch(() => ({}));
+      invoiceNo = body.InvoiceNo || '';
+      accountNo = body.AccountNo || '';
+      amount = body.Amount || '14,90';
+    }
 
-    // 2. Считываем скрытые токены Телеграма из настроек сервера
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
+    console.log(`[E-POS Webhook]: Данные считаны. Счет: ${invoiceNo}, Телефон: ${accountNo}`);
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+    const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
 
     if (!botToken || !chatId) {
-      console.error('[ExpressPay Webhook]: Ошибка! На Vercel не настроены TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID');
+      console.error('[E-POS Webhook]: КРИТИЧЕСКАЯ ОШИБКА! Токены TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID не найдены в панели Vercel.');
       return new Response('OK', { status: 200 });
     }
 
-    // Очищаем строку, доставая чистый телефон клиента
     const cleanPhone = accountNo ? accountNo.replace('tel_', '') : 'Не указан';
 
-    // 3. Формируем красивый продающий лог для вашего Telegram
+    // 2. Формируем текст сообщения
     const tgMessage = `💰 СВЕЖАЯ ОПЛАТА В ЕРИП! 💰\n\n` +
                       `🔹 Номер счета: ${invoiceNo || '—'}\n` +
                       `🔹 Номер телефона: ${cleanPhone}\n` +
-                      `🔹 Сумма: ${amount || '14,90'} BYN\n\n` +
-                      `🚀 Клиент оплатил трипвайер. Возьми его телефон, найди в Telegram/Viber или напиши в Директ и продублируй ссылку на Google Диск на всякий случай!`;
+                      `🔹 Сумма: ${amount} BYN\n\n` +
+                      `👉 Проверь личку клиента и продублируй ему ссылку на Google Диск!`;
 
-    const tgUrl = `https://telegram.org/{botToken}/sendMessage`;
+    const tgUrl = `https://telegram.org{botToken}/sendMessage`;
 
-    // Отправляем запрос на сервера Телеграм
-    await axios.post(tgUrl, {
-      chat_id: chatId,
-      text: tgMessage,
-    });
+    // 3. ОТПРАВКА С РАСШИРЕННОЙ ДИАГНОСТИКОЙ ОШИБОК
+    try {
+      const tgResponse = await axios.post(tgUrl, {
+        chat_id: chatId,
+        text: tgMessage,
+      }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 5000
+      });
+      
+      console.log('[E-POS Webhook]: УСПЕХ! Сервер Telegram принял сообщение:', tgResponse.data);
+    } catch (tgErr: any) {
+      console.error('[E-POS Webhook]: СЕРВЕР TELEGRAM ОТКЛОНИЛ ЗАПРОС!');
+      if (tgErr.response) {
+        console.error('Код ошибки от Telegram:', tgErr.response.status);
+        console.error('Детали ошибки от Telegram:', JSON.stringify(tgErr.response.data));
+      } else {
+        console.error('Ошибка сети с Telegram:', tgErr.message);
+      }
+    }
 
-    console.log('[ExpressPay Webhook]: Оповещение в Telegram успешно отправлено!');
-
-    // Обязательно отвечаем шлюзу ExpressPay статусом 200 OK, чтобы они знали, что сайт принял сигнал
     return new Response('OK', { status: 200 });
 
   } catch (err: any) {
-    console.error('[ExpressPay Webhook Error]:', err.message);
-    // Всегда возвращаем 200, чтобы платежный агрегатор не блокировал работу роута из-за сетевых сбоев
+    console.error('[E-POS Webhook Критическая ошибка]:', err.message);
     return new Response('OK', { status: 200 });
   }
 }
+
