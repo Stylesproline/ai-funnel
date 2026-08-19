@@ -6,51 +6,69 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     // =====================================================
-    // 1. ПОЛУЧАЕМ ДАННЫЕ ОТ EXPRESSPAY
+    // 1. ЧИТАЕМ WEBHOOK ОТ EXPRESSPAY
     // =====================================================
+
+    const contentType = request.headers.get('content-type') || '';
 
     let invoiceNo = '';
     let accountNo = '';
-    let amount = '14,90';
+    let amount = '14.90';
 
-    try {
+    if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
 
       invoiceNo = String(formData.get('InvoiceNo') || '');
       accountNo = String(formData.get('AccountNo') || '');
-      amount = String(formData.get('Amount') || '14,90');
+      amount = String(formData.get('Amount') || '14.90');
 
-    } catch {
-      // Если ExpressPay прислал JSON
-      const body: any = await request.json().catch(() => ({}));
+    } else if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+
+      invoiceNo = String(formData.get('InvoiceNo') || '');
+      accountNo = String(formData.get('AccountNo') || '');
+      amount = String(formData.get('Amount') || '14.90');
+
+    } else {
+      const body = await request.json().catch(() => ({}));
 
       invoiceNo = String(body.InvoiceNo || '');
       accountNo = String(body.AccountNo || '');
-      amount = String(body.Amount || '14,90');
+      amount = String(body.Amount || '14.90');
     }
 
-    console.log(
-      `[E-POS Webhook]: Счет: ${invoiceNo}, AccountNo: ${accountNo}, Amount: ${amount}`
-    );
+    console.log('[E-POS Webhook] Получены данные:', {
+      invoiceNo,
+      accountNo,
+      amount,
+      contentType,
+    });
 
     // =====================================================
-    // 2. ПОЛУЧАЕМ TELEGRAM ДАННЫЕ ИЗ VERCEL ENV
+    // 2. TELEGRAM ENV
     // =====================================================
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
     const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
 
-    if (!botToken || !chatId) {
+    if (!botToken) {
       console.error(
-        '[E-POS Webhook]: TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID отсутствует'
+        '[Telegram] TELEGRAM_BOT_TOKEN отсутствует'
       );
 
-      // Возвращаем 200 ExpressPay, чтобы webhook не повторял запрос бесконечно
+      return new Response('OK', { status: 200 });
+    }
+
+    if (!chatId) {
+      console.error(
+        '[Telegram] TELEGRAM_CHAT_ID отсутствует'
+      );
+
       return new Response('OK', { status: 200 });
     }
 
     // =====================================================
-    // 3. ОЧИЩАЕМ AccountNo
+    // 3. ДАННЫЕ КЛИЕНТА
     // =====================================================
 
     const cleanAccountNo = accountNo
@@ -58,92 +76,101 @@ export async function POST(request: NextRequest) {
       : 'Не указан';
 
     // =====================================================
-    // 4. ФОРМИРУЕМ СООБЩЕНИЕ
+    // 4. СООБЩЕНИЕ
     // =====================================================
 
     const tgMessage =
       `💰 СВЕЖАЯ ОПЛАТА В ЕРИП! 💰\n\n` +
       `🔹 Номер счета: ${invoiceNo || '—'}\n` +
-      `🔹 AccountNo: ${cleanAccountNo}\n` +
+      `🔹 Телефон: ${cleanAccountNo}\n` +
       `🔹 Сумма: ${amount} BYN\n\n` +
       `👉 Проверь личку клиента и продублируй ему ссылку на Google Диск!`;
 
     // =====================================================
-    // 5. ПРАВИЛЬНЫЙ TELEGRAM BOT API URL
+    // 5. ПРАВИЛЬНЫЙ TELEGRAM API URL
     // =====================================================
 
     const tgUrl =
       `https://api.telegram.org/bot${botToken}/sendMessage`;
 
-    console.log('[Telegram]: Отправляем сообщение...');
-    console.log('[Telegram]: Chat ID:', chatId);
+    console.log(
+      '[Telegram] Отправляем уведомление в chat:',
+      chatId
+    );
 
     // =====================================================
-    // 6. ОТПРАВЛЯЕМ СООБЩЕНИЕ
+    // 6. ОТПРАВКА
     // =====================================================
 
-    try {
-      const tgResponse = await axios.post(
-        tgUrl,
-        {
-          chat_id: chatId,
-          text: tgMessage,
+    const tgResponse = await axios.post(
+      tgUrl,
+      {
+        chat_id: chatId,
+        text: tgMessage,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: 10000,
-        }
-      );
-
-      console.log(
-        '[Telegram]: УСПЕШНО:',
-        JSON.stringify(tgResponse.data, null, 2)
-      );
-
-    } catch (tgErr: any) {
-      console.error('[Telegram]: ОШИБКА ОТПРАВКИ');
-
-      if (tgErr.response) {
-        console.error(
-          '[Telegram]: HTTP:',
-          tgErr.response.status
-        );
-
-        console.error(
-          '[Telegram]: Ответ:',
-          JSON.stringify(tgErr.response.data, null, 2)
-        );
-      } else {
-        console.error(
-          '[Telegram]: Network error:',
-          tgErr.message
-        );
+        timeout: 10000,
       }
+    );
 
-      // ExpressPay получает 200,
-      // чтобы не зациклить повторную отправку webhook
+    // =====================================================
+    // 7. ПРОВЕРЯЕМ ОТВЕТ TELEGRAM
+    // =====================================================
+
+    console.log(
+      '[Telegram] Ответ:',
+      JSON.stringify(tgResponse.data, null, 2)
+    );
+
+    if (!tgResponse.data?.ok) {
+      console.error(
+        '[Telegram] Telegram вернул ok=false:',
+        tgResponse.data
+      );
+
       return new Response('OK', { status: 200 });
     }
 
+    console.log(
+      '[Telegram] ✅ Уведомление успешно отправлено'
+    );
+
     // =====================================================
-    // 7. EXPRESSPAY ПОЛУЧАЕТ ПОДТВЕРЖДЕНИЕ
+    // 8. ОТВЕТ EXPRESSPAY
     // =====================================================
 
     return new Response('OK', {
       status: 200,
     });
 
-  } catch (err: any) {
+  } catch (error: any) {
 
     console.error(
-      '[E-POS Webhook Критическая ошибка]:',
-      err.message
+      '[E-POS Webhook] КРИТИЧЕСКАЯ ОШИБКА:',
+      error
     );
 
-    // Для webhook лучше не заставлять ExpressPay
-    // бесконечно повторять запрос
+    if (axios.isAxiosError(error)) {
+      console.error(
+        '[Telegram] HTTP status:',
+        error.response?.status
+      );
+
+      console.error(
+        '[Telegram] Response:',
+        JSON.stringify(
+          error.response?.data,
+          null,
+          2
+        )
+      );
+    }
+
+    // ExpressPay должен получить 200,
+    // чтобы не делать повторные webhook-запросы
     return new Response('OK', {
       status: 200,
     });
