@@ -27,7 +27,7 @@ export async function createExpressPayEripInvoice(formData: { name: string; phon
       AccountNo: 'tel_' + cleanPhone,
 
       // Ваша правильная сумма с запятой
-      Amount: '14,90',
+      Amount: '59,90',
 
       Currency: '933',
 
