@@ -101,7 +101,7 @@ export default function TimerAndButton({ onPayAction }: TimerAndButtonProps) {
           disabled={loading || !isChecked} // Кнопка заблокирована, пока нет галочки!
           className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-base rounded-xl shadow-lg shadow-emerald-900/20 active:scale-[0.99] transition-all disabled:opacity-30 disabled:pointer-events-none text-center uppercase tracking-wider mt-2"
         >
-          {loading ? 'Генерация счета ЕРИП...' : '👉 Получить комплект за 14.90 BYN'}
+          {loading ? 'Генерация счета ЕРИП...' : '👉 Получить комплект за 59.90 BYN'}
         </button>
       </form>
     </div>
