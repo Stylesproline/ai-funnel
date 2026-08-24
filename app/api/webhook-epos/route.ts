@@ -13,28 +13,28 @@ export async function POST(request: NextRequest) {
 
     let invoiceNo = '';
     let accountNo = '';
-    let amount = '14.90';
+    let amount = '59.90';
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
 
       invoiceNo = String(formData.get('InvoiceNo') || '');
       accountNo = String(formData.get('AccountNo') || '');
-      amount = String(formData.get('Amount') || '14.90');
+      amount = String(formData.get('Amount') || '59.90');
 
     } else if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
 
       invoiceNo = String(formData.get('InvoiceNo') || '');
       accountNo = String(formData.get('AccountNo') || '');
-      amount = String(formData.get('Amount') || '14.90');
+      amount = String(formData.get('Amount') || '59.90');
 
     } else {
       const body = await request.json().catch(() => ({}));
 
       invoiceNo = String(body.InvoiceNo || '');
       accountNo = String(body.AccountNo || '');
-      amount = String(body.Amount || '14.90');
+      amount = String(body.Amount || '59.90');
     }
 
     console.log('[E-POS Webhook] Получены данные:', {
