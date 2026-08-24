@@ -13,7 +13,7 @@ export default function SuccessDownloadPage() {
       if (window.fbq) {
         // @ts-ignore
         window.fbq('track', 'Purchase', {
-          value: 14.90,
+          value: 59.90,
           currency: 'BYN',
           content_name: 'Комплект ИИ-Маркетолог'
         });
@@ -51,7 +51,7 @@ export default function SuccessDownloadPage() {
         <div className="mt-6 bg-slate-900/40 rounded-xl p-4 border border-slate-700">
           <p className="text-xs text-slate-400 mb-3">Нажмите на кнопку ниже, чтобы открыть файлы:</p>
           <a
-            href="https://google.com" // Замените на вашу ссылку на Google Диск / Telegram-канал
+            href="https://drive.google.com/drive/folders/1g6GjQ_qmkDgMIdUVq6Lgr12MNoXqSizp?usp=sharing" // Замените на вашу ссылку на Google Диск / Telegram-канал
             target="_blank"
             rel="noopener noreferrer"
             className="w-full inline-flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-bold text-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition-all duration-200 transform active:scale-95"
