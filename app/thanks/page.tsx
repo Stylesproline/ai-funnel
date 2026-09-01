@@ -16,20 +16,15 @@ export async function createExpressPayEripInvoice(formData: { name: string; phon
       };
     }
 
-    // Очищаем телефон от лишних символов
     const cleanPhone = formData.phone.replace(/[^0-9+]/g, '');
 
     const apiParams = {
-      // Идентификатор клиента для Telegram-уведомлений
       AccountNo: 'tel_' + cleanPhone,
       Amount: '59,90',
       Currency: '933',
       Info: 'Комплект ИИ-Маркетолог: 300+ промптов и сценариев',
-      
-      // Исправлено: передаем корректное ФИО без «ИИ-Курса»
       Surname: formData.name || 'Покупатель',
       FirstName: 'Комплект ИИ',
-
       ReturnInvoiceUrl: '1'
     };
 
@@ -67,42 +62,55 @@ export async function createExpressPayEripInvoice(formData: { name: string; phon
 
 export default function ThanksPage() {
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4 font-sans">
-      <div className="max-w-md w-full bg-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-700 text-center relative overflow-hidden">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-white flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden selection:bg-emerald-500 selection:text-black">
+      
+      {/* Декоративные размытые свечения на фоне */}
+      <div className="absolute -top-40 -left-40 w-80 h-80 bg-emerald-500/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Основная карточка */}
+      <div className="max-w-md w-full bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.15)] border border-slate-800 text-center relative overflow-hidden z-10">
         
-        {/* Бейдж акцента */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
-          <span>🔥</span> Доступ к материалам РБ 2026
+        {/* Акцентный бейдж */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium mb-5 shadow-inner">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          Доступ к материалам РБ 2026
         </div>
 
-        {/* Усиливаем заголовок */}
-        <h1 className="text-2xl font-black text-white leading-tight">
+        {/* Заголовок */}
+        <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 leading-tight tracking-tight">
           «Комплект ИИ-Маркетолога»
         </h1>
-        <p className="text-slate-400 text-xs mt-2 leading-relaxed">
+        <p className="text-slate-400 text-xs sm:text-sm mt-2.5 leading-relaxed font-normal">
           300+ промптов, готовые сценарии Reels и архитектура ИИ-агентов для быстрого старта в Беларуси.
         </p>
 
-        {/* Буллеты ценности прямо перед оплатой */}
-        <div className="my-5 p-3.5 bg-slate-900/60 rounded-xl text-left border border-slate-700/50 text-xs space-y-2">
-          <div className="flex items-center text-slate-300">
-            <span className="text-emerald-400 font-bold mr-2">✓</span> Выдача материалов сразу после оплаты
+        {/* Карточка с ценностями */}
+        <div className="my-6 p-4 bg-slate-950/60 rounded-2xl text-left border border-slate-800/80 text-xs sm:text-sm space-y-3 shadow-inner">
+          <div className="flex items-center text-slate-200">
+            <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold mr-3 shrink-0">✓</div>
+            <span>Выдача материалов сразу после оплаты</span>
           </div>
-          <div className="flex items-center text-slate-300">
-            <span className="text-emerald-400 font-bold mr-2">✓</span> Официальный счет через систему ЕРИП
+          <div className="flex items-center text-slate-200">
+            <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold mr-3 shrink-0">✓</div>
+            <span>Официальный счет через систему ЕРИП</span>
           </div>
-          <div className="flex items-center text-slate-300">
-            <span className="text-emerald-400 font-bold mr-2">✓</span> Фиксированная цена: <strong className="text-white ml-1">59,90 BYN</strong> <span className="line-through text-slate-500 ml-1">159 BYN</span>
+          <div className="flex items-center text-slate-200 pt-1 border-t border-slate-800/60">
+            <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold mr-3 shrink-0">✓</div>
+            <span>Фиксированная цена: <strong className="text-emerald-400 text-base ml-1">59,90 BYN</strong> <span className="line-through text-slate-500 text-xs ml-1.5">159 BYN</span></span>
           </div>
         </div>
 
-        {/* Компонент формы с таймером и кнопкой */}
+        {/* Форма с кнопкой и таймером */}
         <TimerAndButton onPayAction={createExpressPayEripInvoice} />
 
-        {/* Плашка доверия платежей для РБ */}
-        <div className="mt-5 pt-4 border-t border-slate-700/60 flex justify-center items-center gap-3 opacity-60 text-[10px] text-slate-400">
+        {/* Плашка доверия */}
+        <div className="mt-6 pt-4 border-t border-slate-800/80 flex justify-center items-center gap-2 opacity-60 text-[11px] text-slate-400">
           <span>Безопасная оплата через</span>
-          <span className="font-bold text-white tracking-wider">ЕРИП / E-POS</span>
+          <span className="font-semibold text-slate-200 tracking-wider">ЕРИП / E-POS</span>
         </div>
 
       </div>
